@@ -80,11 +80,17 @@ def callback_function(m, where):
         
         print("found", district,"with objective =",objval)
         
+        add_no_worse_cut = False
+        
         if m._number_of_districts < m._enumeration_limit:
+            
             m._districts.append( district )
             m._objectives.append( objval )
             m._number_of_districts += 1
             print("   added to list!")
+            
+            if m._number_of_districts == m._enumeration_limit:
+                add_no_worse_cut = True
             
         else:
             worst_j = 0
@@ -97,10 +103,12 @@ def callback_function(m, where):
                 m._districts[worst_j] = district
                 m._objectives[worst_j] = objval
                 print("   replaced worse solution with objective =",worst_obj)
+                add_no_worse_cut = True
             else:
                 print("   tossing it because it's worse than the others")
                 
-            # hack to disallow worse solutions
+        # hack to disallow worse solutions
+        if add_no_worse_cut:
             new_worst_obj = max( m._objectives[j] for j in range(m._enumeration_limit) )
             print("adding cut saying that objective should be less than",new_worst_obj)
             m._cutoff = min( m._cutoff, new_worst_obj - 1e-6 )
@@ -208,6 +216,7 @@ def enumerate_top_districts(G, obj_type='cut_edges', enumeration_limit=10):
 
         # relate inverse polsby-popper score 'obj' to A and P
         m.addConstr( P * P <= 4 * math.pi * A * obj )
+
     else:
         print("Objective type",obj_type,"is not supported.")
         assert False
@@ -268,6 +277,24 @@ def draw_single_district( filepath, filename, G, district, zoom=False ):
         geoid = df['GEOID20'][u]
         i = node_with_this_geoid[geoid]
         assignment[u] = picked[i]
+
+    df['assignment'] = assignment
+    my_fig = df.plot(column='assignment').get_figure()
+    return 
+
+# function to draw plan
+#
+def draw_plan( filepath, filename, G, plan ):
+    
+    df = gpd.read_file( filepath + filename )
+    assignment = [ -1 for i in G.nodes ]
+    labeling = { i : j for j in range(len(plan)) for i in plan[j] }
+    node_with_this_geoid = { G.nodes[i]['GEOID20'] : i for i in G.nodes }
+
+    for u in range(G.number_of_nodes()):
+        geoid = df['GEOID20'][u]
+        i = node_with_this_geoid[geoid]
+        assignment[u] = labeling[i]
 
     df['assignment'] = assignment
     my_fig = df.plot(column='assignment').get_figure()
