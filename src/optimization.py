@@ -92,7 +92,11 @@ def callback_function(m, where):
         if add_no_worse_cut:
             new_worst_obj = max( m._objectives[j] for j in range(m._enumeration_limit) )
             print("adding cut saying that objective should be less than",new_worst_obj)
-            m._cutoff = min( m._cutoff, new_worst_obj - 1e-6 )
+            if m._obj_type == 'cut_edges':
+                # exploit integrality of objective. If worst is 12, then cutoff is 11.00...01
+                m._cutoff = min( m._cutoff, new_worst_obj - (1 - 1e-6) ) 
+            else:
+                m._cutoff = min( m._cutoff, new_worst_obj - 1e-6 )
             m.cbLazy( m._obj <= m._cutoff )
             
         # add no-good cut
@@ -209,6 +213,7 @@ def enumerate_top_districts(G, obj_type='cut_edges', enumeration_limit=10):
     # additional bookkeeping 
     m._x = x                    # assignment variables
     m._obj = obj
+    m._obj_type = obj_type
     m._DG = DG                  # directed graph
     m._exit = False
     m._number_of_districts = 0
