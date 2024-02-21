@@ -261,6 +261,7 @@ def districting_heuristic(G, obj_type='cut_edges', enumeration_limit=10):
         if ndistricts == G._k - 1:
             partial_plan.append( unused )
             plans.append(partial_plan)
+            print("Finished plan #",len(plans))
             continue
         
         H = G.subgraph(unused).copy()
@@ -287,7 +288,8 @@ def districting_heuristic(G, obj_type='cut_edges', enumeration_limit=10):
                         H.nodes[i]['boundary_perim'] += G.edges[i,j]['shared_perim']
                     else:
                         H.nodes[i]['boundary_perim'] += G.edges[j,i]['shared_perim']
-                
+            
+        print("\n ***Seeking district #", ndistricts+1,"for partial plan",partial_plan)
         districts = enumerate_top_districts( H, obj_type=obj_type, enumeration_limit=enumeration_limit )
         for district in districts:
             new_partial_plan = partial_plan.copy()
