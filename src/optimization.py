@@ -2,6 +2,7 @@ import networkx as nx
 import gurobipy as gp
 from gurobipy import GRB
 import math
+from util import district_objective
 
 # Finds a minimal vertex subset that separates component from vertex b in digraph DG.
 #
@@ -50,11 +51,12 @@ def callback_function(m, where):
         
     # retrieve the LP solution
     xval = m.cbGetSolution(m._x)
-    objval = m.cbGetSolution(m._obj)
+    #objval = m.cbGetSolution(m._obj)
     DG = m._DG
     
     district = [ i for i in DG.nodes if xval[i,0] > 0.5 ]
     assert nx.is_strongly_connected( DG.subgraph(district) )
+    objval = district_objective(DG, district, m._obj_type)
     
     # is complement connected? if so, we may be able to build a plan from this district
     complement = [ i for i in DG.nodes if xval[i,1] > 0.5 ]
@@ -93,7 +95,7 @@ def callback_function(m, where):
             new_worst_obj = max( m._objectives[j] for j in range(m._enumeration_limit) )
             print("adding cut saying that objective should be less than",new_worst_obj)
             if m._obj_type == 'cut_edges':
-                # exploit integrality of objective. If worst is 12, then cutoff is 11.00...01
+                # exploit integrality of cut_edges objective. If worst is 12, then cutoff is 11.00...01
                 m._cutoff = min( m._cutoff, new_worst_obj - (1 - 1e-6) ) 
             else:
                 m._cutoff = min( m._cutoff, new_worst_obj - 1e-6 )
@@ -261,13 +263,31 @@ def districting_heuristic(G, obj_type='cut_edges', enumeration_limit=10):
             plans.append(partial_plan)
             continue
         
-        H = G.subgraph(unused)
+        H = G.subgraph(unused).copy()
         H._L = G._L
         H._U = G._U
         H._k = G._k - ndistricts
         H._root = None
         H._size = 1
         
+        for i in H.nodes:
+            
+            # which nodes are boundary in H = G - used?
+            if H.nodes[i]['boundary_node'] == False:
+                for j in G.neighbors(i):
+                    if j in used:
+                        H.nodes[i]['boundary_node'] = True
+                        H.nodes[i]['boundary_perim'] = 0
+                        break # loop over neighbors j
+            
+            #  and what is their new exterior boundary length?
+            for j in G.neighbors(i):
+                if j in used:
+                    if (i,j) in G.edges:
+                        H.nodes[i]['boundary_perim'] += G.edges[i,j]['shared_perim']
+                    else:
+                        H.nodes[i]['boundary_perim'] += G.edges[j,i]['shared_perim']
+                
         districts = enumerate_top_districts( H, obj_type=obj_type, enumeration_limit=enumeration_limit )
         for district in districts:
             new_partial_plan = partial_plan.copy()
