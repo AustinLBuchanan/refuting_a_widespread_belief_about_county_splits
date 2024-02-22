@@ -138,7 +138,7 @@ def callback_function(m, where):
 #
 def enumerate_top_districts(G, obj_type='cut_edges', enumeration_limit=10):
     
-    assert obj_type in {'cut_edges', 'perimeter', 'polsby_popper'}
+    assert obj_type in {'cut_edges', 'perimeter', 'inverse_polsby_popper'}
     
     # build model
     m = gp.Model()
@@ -190,7 +190,7 @@ def enumerate_top_districts(G, obj_type='cut_edges', enumeration_limit=10):
         # perimeter_length = within_state_perimeter + state_boundary_perimeter
         m.addConstr( obj == gp.quicksum( G.edges[i,j]['shared_perim'] * is_cut[i,j] for i,j in G.edges ) 
                     + gp.quicksum( G.nodes[i]['boundary_perim'] * x[i,0] for i in G.nodes if G.nodes[i]['boundary_node'] ) )
-    elif obj_type == 'polsby_popper':
+    elif obj_type == 'inverse_polsby_popper':
         
         # area of district
         A = m.addVar() 
