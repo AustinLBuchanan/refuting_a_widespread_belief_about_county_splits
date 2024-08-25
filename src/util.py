@@ -5,12 +5,16 @@ import math
 
 # Function to read graph from json file
 #
-def read_graph_from_json(json_file):
+def read_graph_from_json(json_file, update_population=True):
     with open(json_file) as f:
         data = json.load(f)
-    G = json_graph.adjacency_graph(data)
-    for i in G.nodes:
-        G.nodes[i]['TOTPOP'] = int( G.nodes[i]['P0010001'] )
+    G = json_graph.adjacency_graph(data) 
+
+    if update_population:
+        # total population
+        for i in G.nodes:
+            G.nodes[i]['TOTPOP'] = G.nodes[i]['P0010001'] 
+    
     return G
 
 
